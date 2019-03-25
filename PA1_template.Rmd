@@ -1,0 +1,131 @@
+---
+title: "Activity Monitoring - Project 1"
+author: "Fred Paredes"
+date: "3/24/2019"
+output: html_document
+---
+
+```{r library, echo=FALSE}
+library("dplyr", lib.loc="/Library/Frameworks/R.framework/Versions/3.5/Resources/library")
+library("lubridate", lib.loc="/Library/Frameworks/R.framework/Versions/3.5/Resources/library")
+library("tidyr", lib.loc="/Library/Frameworks/R.framework/Versions/3.5/Resources/library")
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Project 1
+
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the “quantified self” movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
+
+The variables included in this dataset are:
+
+- steps: Number of steps taking in a 5-minute interval (missing values are coded as **NA**)
+- date: The date on which the measurement was taken in **YYYY-MM-DD** format
+- interval: Identifier for the 5-minute interval in which measurement was taken
+
+Dataset: [Activity monitoring data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip)
+
+### Loading and processing the data
+```{r loading}
+data_rep <- read.csv("/Users/fredparedes/Documents/Data Science Course/Class/ReproducealbeResearchProject/activity.csv")
+
+#convert factor to date type
+data_rep$date <- as.Date(data_rep$date)
+
+#get the mean per day
+#mean_steps_per_day <- aggregate(data_rep2$steps, list(Date = data_rep2$date), FUN=mean)
+
+# merge the activity with the descriptive label 
+#fixed_data_rep <- merge(mean_steps_per_day, data_rep, by.x = "date", by.y = "date", all = TRUE)
+
+
+summary(data_rep)
+```
+
+### What is the histogrm of the total number of steps per day?
+
+```{r histogram}
+#sum the number of steps per day
+total_steps_per_day <- aggregate(data_rep$steps, list(Date = data_rep$date), FUN=sum)
+
+steps_mean <- mean(total_steps_per_day$x, na.rm = TRUE)
+steps_median <- median(total_steps_per_day$x, na.rm = TRUE)
+
+hist(total_steps_per_day$x,
+     main = "Histogram of Steps per Day",
+     xlab = "Steps",
+     border = "blue",
+     col = "green")
+     
+```
+
+**Daily Steps Mean:** `r steps_mean`\
+\
+**Daily Steps Median:** `r steps_median`
+
+
+### What is the average daily activity pattern?
+
+```{r time_plot}
+
+ median_steps_per_day <- aggregate(data_rep$steps, list(Interval = data_rep$interval), function(x) median(x, na.rm = TRUE))
+
+plot(median_steps_per_day$Interval, median_steps_per_day$x, type = "l", xlab = "Steps", ylab = "Interval")
+
+max_steps <- median_steps_per_day[median_steps_per_day$x == max(median_steps_per_day$x), ]
+
+```
+**Interval with Maximum Steps:** `r max_steps`
+
+### Inputing missing values
+```{r missing_values}
+# number of NAs
+total_NA <- colSums(is.na(data_rep))
+
+mean_steps_per_day <- aggregate(data_rep$steps, list(date = data_rep$date), function(x) mean(x, na.rm = TRUE))
+ 
+# merge the data frames
+
+names(mean_steps_per_day) <- c("date", "mean_steps")
+
+merge_data_rep <- merge(data_rep, mean_steps_per_day)
+
+# get rid of NaN for days with no values
+merge_data_rep$mean_steps[merge_data_rep$mean_steps == "NaN"] <- 0
+
+#replace NA values with mean value for that day
+
+merge_data_rep$steps[is.na(merge_data_rep$steps)] <- merge_data_rep$mean_steps
+
+plot(merge_data_rep$interval, merge_data_rep$steps, type = "l", xlab = "Steps", ylab = "Interval")
+
+```
+\
+\
+**Total Number of NAs for columns Steps, Dates, Interval:** `r total_NA`
+
+### Are there differences in activity patterns between weekdays and weekends?
+
+```{r weekdays_weekends}
+
+#create new weekend column
+merge_data_rep <- cbind(merge_data_rep, weekdays(as.Date(merge_data_rep$date)))
+
+#rename columns
+names(merge_data_rep) <- c("steps", "date", "interval", "mean_steps", "weekday")
+
+#convert factor to character
+merge_data_rep$weekday <- as.character(merge_data_rep$weekday)
+
+#replace weekday names with either weekend or weekday
+merge_data_rep$weekday[merge_data_rep$weekday == "Monday" | merge_data_rep$weekday == "Tuesday" | merge_data_rep$weekday == "Wednesday" | merge_data_rep$weekday == "Thursday" | merge_data_rep$weekday == "Friday"] <- "weekday"
+
+merge_data_rep$weekday[merge_data_rep$weekday == "Saturday" | merge_data_rep$weekday == "Sunday"] <- "weekend"
+
+#plot(merge_data_rep$interval, merge_data_rep$steps, type = "l", xlab = "Steps", ylab = "Interval")
+#lines(merge_data_rep$weekdays == "weekday", type = "l", col = "red")
+
+#Unable to finish two factor plot
+```
